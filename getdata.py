@@ -9,14 +9,14 @@ def connection(dev_port, id, password):
     #パスワード設定
     logger.info("パスワード設定")
     ser.write(("SKSETPWD C " + password + "\r\n").encode())
-    ser.readline()
-    ser.readline()
+    logger.info(ser.readline())
+    logger.info(ser.readline())
 
     #ID設定
     logger.info("ID設定")
     ser.write(("SKSETRBID " + id + "\r\n").encode())
-    ser.readline()
-    ser.readline()
+    logger.info(ser.readline())
+    logger.info(ser.readline())
 
     scan_duration = 4
     scan_result = {}
@@ -26,6 +26,7 @@ def connection(dev_port, id, password):
 
         while(True):
             line = ser.readline()
+            logger.info(line)
             if line.startswith("EVENT 22".encode()):
                 #SCAN終了
                 break
@@ -43,27 +44,28 @@ def connection(dev_port, id, password):
 
     #channel設定
     ser.write(("SKSREG S2 " + scan_result["Channel"] + "\r\n").encode())
-    ser.readline()
-    ser.readline()
+    logger.info(ser.readline())
+    logger.info(ser.readline())
 
     #Pan ID設定
     ser.write(("SKSREG S3 " + scan_result["Pan ID"] + "\r\n").encode())
-    ser.readline()
-    ser.readline()
+    logger.info(ser.readline())
+    logger.info(ser.readline())
 
 
     #IPV6リンクローカルアドレス取得
     ser.write(("SKLL64 " + scan_result["Addr"] + "\r\n").encode())
-    ser.readline()
+    logger.info(ser.readline())
     ipv6_addr = ser.readline().decode().strip()
 
     #PANA 接続開始
     ser.write(("SKJOIN " + ipv6_addr + "\r\n").encode())
-    ser.readline()
-    ser.readline()
+    logger.info(ser.readline())
+    logger.info(ser.readline())
 
     while True:
         line = ser.readline()
+        logger.info(line)
         if line.startswith("EVENT 24".encode()):
             ser.close()
             return None,None
@@ -73,7 +75,7 @@ def connection(dev_port, id, password):
 
     #タイムアウト設定
     ser.timeout = 8
-    ser.readline()
+    logger.info(ser.readline())
     
 
     return ser, ipv6_addr
@@ -85,10 +87,11 @@ def get_data(ser, addr, on_receive):
     
     command = "SKSENDTO 1 {0} 0E1A 1 {1:04X} ".format(addr, len(CMD))
     ser.write((command).encode() + CMD)
-    ser.readline()
-    ser.readline()
-    ser.readline()
+    logger.info(ser.readline())
+    logger.info(ser.readline())
+    logger.info(ser.readline())
     line = ser.readline()
+    logger.info(line)
 
     if line.startswith("ERXUDP".encode()):
         cols = line.decode().strip().split(" ")
@@ -138,6 +141,7 @@ if __name__ == "__main__":
                 time.sleep(next_time)
 
             except Exception as e:
+                print(e)
                 ser.close()
                 break
                 

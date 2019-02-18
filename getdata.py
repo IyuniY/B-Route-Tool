@@ -1,10 +1,5 @@
-
-
 import serial
-import dotenv
-import os
 from logging import getLogger
-import time
 
 logger = getLogger(__name__)
 
@@ -63,7 +58,7 @@ def connection(dev_port, id, password):
     ipv6_addr = ser.readline().decode().strip()
 
     #PANA 接続開始
-    ser.write(("SKJOIN " + ipv6_addr + "\r\n").encode());
+    ser.write(("SKJOIN " + ipv6_addr + "\r\n").encode())
     ser.readline()
     ser.readline()
 
@@ -79,6 +74,7 @@ def connection(dev_port, id, password):
     #タイムアウト設定
     ser.timeout = 8
     ser.readline()
+    
 
     return ser, ipv6_addr
 
@@ -105,6 +101,14 @@ def get_data(ser, addr, on_receive):
         on_receive(power)
 
 if __name__ == "__main__":
+    import time
+    import threading
+    import os
+    import dotenv
+    import datetime
+
+    INTERVAL = 10
+
     #環境設定読み込み
     env_path = os.path.join(os.path.dirname(__file__), ".env")
     dotenv.load_dotenv(dotenv_path=env_path)
@@ -117,11 +121,21 @@ if __name__ == "__main__":
 
     #接続に成功
     if ser:
-        func = lambda x: print("瞬間電力値: %sW" % x)
+        func = lambda x: print("%s 瞬間電力値: %sW" % (datetime.datetime.now(), x))
+        
+        base_time = time.time()
+        next_time = 0        
         while True:
             try:
-                get_data(ser, ipv6_addr, func)
-                time.sleep(10)
+                t = threading.Thread(target=get_data, args=(ser, ipv6_addr, func))
+                t.start()
+
+                #スレッド終了まで待機する
+                t.join()
+
+                #スリープ時間計算
+                next_time = ((base_time - time.time()) % INTERVAL) or INTERVAL
+                time.sleep(next_time)
 
             except Exception as e:
                 ser.close()
